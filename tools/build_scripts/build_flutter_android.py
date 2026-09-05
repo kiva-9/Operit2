@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from common import (
     DIST_DIR,
     FLUTTER_APP_DIR,
     RELEASE_DIR,
+    build_env_with_typescript,
     copy_required_file,
     flutter_command,
     flutter_pub_get,
@@ -77,16 +79,18 @@ def main() -> int:
         ensure_android_signing()
     flutter = flutter_command()
     configure_android_flutter_sdk(flutter)
+    typescript_version = os.environ.get("TYPESCRIPT_VERSION", "5.9.3")
+    env = build_env_with_typescript(typescript_version)
     with staged_non_ohos_flutter_dependencies():
-        flutter_pub_get()
+        flutter_pub_get(env=env)
         if args.enforce_lockfile:
-            flutter_pub_get(enforce_lockfile=True)
+            flutter_pub_get(enforce_lockfile=True, env=env)
         command = [flutter, "build", "apk", "--release", "--no-pub", "--split-per-abi"]
         if args.build_name:
             command.extend(["--build-name", args.build_name])
         if args.build_number:
             command.extend(["--build-number", args.build_number])
-        run(command, cwd=FLUTTER_APP_DIR)
+        run(command, cwd=FLUTTER_APP_DIR, env=env)
 
     apk_dir = FLUTTER_APP_DIR / "build" / "app" / "outputs" / "flutter-apk"
     outputs = {
